@@ -1,8 +1,0 @@
-sleep 15:1:stdin:stdout
-echo ProcessP0:4:stdin:out1.txt
-sleep 20:3:stdin:stdout
-echo ProcessP2:4:out2.txt
-echo cat out1.txt out2.txt:5:stdin:cat-out.txt
-grep process cat-out.txt:6:cat-out.txt:grep-out.txt
-wc grep-out.txt:none:grep-out.txt:wc-out.txt
-
