@@ -1,3 +1,11 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<errno.h>
+#include<unistd.h>
+#include<sys/types.h>
+#include<string.h>
+
+
 #define INELIGIBLE 0
 #define READY 1
 #define RUNNING 2
@@ -22,6 +30,33 @@ typedef struct node {
   int status;
   pid_t pid;
 } node_t;
+
+void print_node_info(struct node* nodee ){
+	int i ;
+	printf("id: %d\n",nodee->id); //print id
+	printf("prog=%s\n",nodee->prog);//print prog
+	printf("num_args=%d\n",nodee->num_args);
+	printf("Args:\n");
+	for (i=0;nodee->args[i]!=(char*)NULL && i<MAX_LENGTH/2+1;i++){ //print args
+		printf("%s\n",nodee->args[i]);
+	}
+	printf("num_parents=%d\n",nodee->num_parents);//print num_parents
+	printf("Parents:\n");
+	for (i=0;i<MAX_LENGTH ;i++){//print parents
+		printf("%d ",nodee->parents[i]);
+		}
+	printf("\n");
+	
+
+	printf("\nnum_children=%d\n",nodee->num_children);//print num_children
+	printf("Children:\n:");
+	for (i =0; i<MAX_LENGTH;i++){//print children
+		printf("%d ",nodee->children[i]);
+		if (i==MAX_LENGTH-1){
+			break;
+		}
+	}
+}
 
 /**
  * Search for tokens in the string s, separated by the characters in 
