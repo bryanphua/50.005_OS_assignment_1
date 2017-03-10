@@ -5,7 +5,6 @@
 #include<sys/types.h>
 #include<string.h>
 
-
 #define INELIGIBLE 0
 #define READY 1
 #define RUNNING 2
@@ -15,6 +14,8 @@
 #define MAX_PARENTS 10
 #define MAX_CHILDREN 10
 #define MAX_NODES 50
+
+#define DEBUG 1
 
 typedef struct node {
   int id;
@@ -31,33 +32,28 @@ typedef struct node {
   pid_t pid;
 } node_t;
 
-void print_node_info(struct node nodee ){
-	int i ;
-	printf("Node id: %d\n",nodee.id); //print id
-	printf("prog=%s\n",nodee.prog);//print prog
-	printf("num_args=%d\n",nodee.num_args);
-	printf("Args: [");
-	for (i=0;nodee.args[i]!=(char*)NULL && i<MAX_LENGTH/2+1;i++){ //print args
-		printf("%s,",nodee.args[i]);
-	}
-	printf("]");
-	printf("\nnum_parents=%d\n",nodee.num_parents);//print num_parents
-	printf("Parents: [");
-	for (i=0;i<nodee.num_parents ;i++){//print parents
-		printf("%d, ",nodee.parents[i]);
-		}
-	printf("]");
-	printf("\nnum_children=%d\n",nodee.num_children);//print num_children
-	printf("Children: [");
-	for (i =0; i<nodee.num_children;i++){//print children
-		printf("%d, ",nodee.children[i]);
-	}
-	printf("]\n\n");
+void print_node_info(struct node n){
+	int i;
+
+	printf("Node id: %d\n  prog - %s", n.id, n.prog);
+
+    // arguments
+	printf("\n  Arguments (%d): ", n.num_args);
+	for (i=0; n.args[i]!=(char*)NULL && i<MAX_LENGTH/2+1; i++) printf("%s, ", n.args[i]);
+
+    // parents
+	printf("\n  Parents (%d): ", n.num_parents);
+	for (i=0; i<n.num_parents; i++) printf("%d, ", n.parents[i]);
+
+    // children
+	printf("\n  Children (%d): ", n.num_children);
+	for (i=0; i<n.num_children; i++) printf("%d, ", n.children[i]);
+
+	printf("\n\n");
 }
-void print_all_nodes_info(struct node* nodes,int numnodes){
-	for (int i=0; i<numnodes;i++){
-		print_node_info(nodes[i]);
-	}
+
+void print_all_nodes_info(struct node* nodes, int numnodes){
+	for (int i=0; i<numnodes; i++) print_node_info(nodes[i]);
 }
 
 /**
@@ -283,13 +279,14 @@ int parse_graph_file(char *file_name, node_t *node) {
  */
 int parse_node_parents(node_t *nodes, int num_nodes) {
   node_t *child;
-  for(int i=0;i<num_nodes;i++){
-    for(int j=0;j<nodes[i].num_children;j++){
-     //go to child , set parent , increment num_parents
-      child =&(nodes[nodes[i].children[j]]);	     
+  for(int i=0; i<num_nodes; i++) {
+    for(int j=0; j<nodes[i].num_children; j++) {
+      child = &(nodes[nodes[i].children[j]]);
+
+      // set parent and increment num_parents
       child->parents[child->num_parents] = i;
       child->num_parents++;
-    }	
+    }
   }
   return 0;
 }
@@ -304,6 +301,7 @@ int parse_node_parents(node_t *nodes, int num_nodes) {
  * an error.
  */
 int parse_node_status(node_t *nodes, int num_nodes) {
+  return 0;
 }
 
 /**
@@ -312,74 +310,61 @@ int parse_node_status(node_t *nodes, int num_nodes) {
  * Returns 0 if printed successfully.
  */
 int print_process_tree(node_t *nodes, int num_nodes) {
+  return 0;
 }
 
 /**
  * Takes in a graph file and executes the programs in parallel.
  */
 int main(int argc, char *argv[]) {
-  int debug = 1;
   node_t nodes[MAX_NODES];
   int num_nodes;
   int num_nodes_finished;
   char* filename;	
+
   /* Check command line arguments */
   //accepts 1 argument -> filename of graph
-  if (argc==2){
+  if (argc==2) {
     filename = argv[1];	
-    
-  }
-  else{
-    perror("requires one argument");
+  } else {
+    perror("requires one argument\n");
+    return -1;
   }
 
   /* Parse graph file */
   fprintf(stderr, "Parsing graph file...\n");
-  /* invocation to parse_graph_files */
- 
   num_nodes = parse_graph_file(filename, nodes);
-  if(num_nodes>0){
-    fprintf(stderr,"number of nodes =%d",num_nodes);
-  }
-  else if (num_nodes ==0){
-    fprintf(stderr,"number of nodes =0");
-  }
-  //error
-  else{
+
+  if (num_nodes<0) {
     perror("error parsing graph file");
+  } else {
+    fprintf(stderr,"\nnumber of nodes = %d\n\n", num_nodes);
   }
 
   /* Parse nodes for parents */
   fprintf(stderr, "Parsing node parents...\n");
-
-  if (parse_node_parents(nodes,num_nodes)!=0){
-      fprintf(stderr,"error parsing node parents");
+  if (parse_node_parents(nodes, num_nodes)!=0) {
+    fprintf(stderr,"error parsing node parents");
   } 
   
   //Test: check children and parents of all nodes
-  if (debug){ 
-    print_all_nodes_info(nodes,num_nodes);
-  }
-
-
-
-
+  if (DEBUG) print_all_nodes_info(nodes, num_nodes);
 
   /* Print process tree */
   fprintf(stderr, "\nProcess tree:\n");
-
-  /* INSERT CODE  - print the process tree */
+  if (print_process_tree(nodes, num_nodes)!=0) {
+    fprintf(stderr,"error printing process tree");
+  }
 
   /* Run processes */
   fprintf(stderr, "Running processes...\n");
-
-  /* INSERT CODE  - invocation to parse_node_status */
+  num_nodes_finished = parse_node_status(nodes, num_nodes);
   
-  if (num_nodes_finished < 0) {
+  if (num_nodes_finished<0) {
     perror("Error executing processes");
     return EXIT_FAILURE;
+  } else {
+    fprintf(stderr, "All processes finished. Exiting.\n");
+    return EXIT_SUCCESS;
   }
-
-  fprintf(stderr, "All processes finished. Exiting.\n");
-  return EXIT_SUCCESS;
 }
