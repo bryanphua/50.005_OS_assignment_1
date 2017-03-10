@@ -7,7 +7,7 @@ Transverse a directed acyclic graph of user commands and executing them while ma
 It takes in a graph file name as an argument. It parses the graph file and converts it into a DAG data structure. It first runs programs that have no dependencies. When a program has finished, it raises the READY flag of its children programs to indicate to the process manager that they are ready to run.
 
 #How to compile
-gcc -std=c99 -o processmgt processmgt.
+gcc -std=c99 -o processmgt processmgt.c
 
 #How to run
 ./processmgt `<graph filename>`
