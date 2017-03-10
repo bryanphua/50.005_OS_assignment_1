@@ -37,9 +37,13 @@ void print_node_info(struct node n){
 
 	printf("Node id: %d\n  prog - %s", n.id, n.prog);
 
+    // io
+	printf("\n   in: %s\n  out: %s", n.input, n.output);
+
     // arguments
 	printf("\n  Arguments (%d): ", n.num_args);
-	for (i=0; n.args[i]!=(char*)NULL && i<MAX_LENGTH/2+1; i++) printf("%s, ", n.args[i]);
+	for (i=0; i<n.num_args; i++) printf("%s, ", n.args[i]);
+	//for (i=0; n.args[i]!=(char*)NULL && i<MAX_LENGTH/2+1; i++) printf("%s, ", n.args[i]);
 
     // parents
 	printf("\n  Parents (%d): ", n.num_parents);
@@ -304,12 +308,28 @@ int parse_node_status(node_t *nodes, int num_nodes) {
   return 0;
 }
 
+node_t *allnodes;
+
+int print_proc_recurse(node_t root, int depth) {
+    for (int j=0; j<depth; j++) printf("   ");
+    if (depth) printf("|- ");
+    printf("%d: %s\n", root.id, root.prog);
+    for (int i=0; i<root.num_children; i++) {
+        print_proc_recurse(allnodes[root.children[i]], depth+1);
+    }
+    return 0;
+}
+
 /**
  * Prints the process tree represented by nodes to standard error.
  *
  * Returns 0 if printed successfully.
  */
 int print_process_tree(node_t *nodes, int num_nodes) {
+  allnodes = nodes;
+  for(int i=0; i<num_nodes; i++) {
+    if(nodes[i].num_parents==0) print_proc_recurse(nodes[i], 0);
+  }
   return 0;
 }
 
