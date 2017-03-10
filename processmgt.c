@@ -3,6 +3,7 @@
 #include<errno.h>
 #include<unistd.h>
 #include<sys/types.h>
+#include<sys/wait.h>
 #include<string.h>
 
 #define INELIGIBLE 0
@@ -305,6 +306,39 @@ int parse_node_parents(node_t *nodes, int num_nodes) {
  * an error.
  */
 int parse_node_status(node_t *nodes, int num_nodes) {
+  pid_t p, pstat;
+  node_t *parent;
+  int pstatus;
+  for(int i=0; i<num_nodes; i++) {
+    nodes[i].status = READY;
+    if(nodes[i].num_parents==0) {
+      p = fork();
+      if ( p == -1 ) { // error
+        perror("error forking");
+      } else if ( p == 0 ) { //child
+        nodes[i].status = RUNNING;
+        execlp(NULL, nodes[i].args);
+        return 0;
+      } else {
+        nodes[i].pid = p;
+      }
+    }
+    for (int j=0; j<nodes[i].num_parents; j++) {
+        parent = &(nodes[nodes[i].parents[j]]);
+        if ( parent->pid == NULL ) {
+          nodes[i].status = INELIGIBLE;
+        } else {
+          pstat = waitpid(parent->pid, &pstatus, WNOHANG);
+          if ( pstat == 0 ) {
+            nodes[i].status = INELIGIBLE;
+          } else if ( pstat == -1 ) {
+            perror("error");
+          } else {
+            parent->status = FINISHED;
+          }
+        }
+    }
+  }
   return 0;
 }
 
