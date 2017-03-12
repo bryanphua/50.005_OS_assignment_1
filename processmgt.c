@@ -1,3 +1,5 @@
+#define _POSIX_SOURCE
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<errno.h>
@@ -5,11 +7,14 @@
 #include<sys/types.h>
 #include<sys/wait.h>
 #include<string.h>
+#include<signal.h>
+
 
 #define INELIGIBLE 0
 #define READY 1
 #define RUNNING 2
 #define FINISHED 3
+#define FAILED 4
 
 #define MAX_LENGTH 1024
 #define MAX_PARENTS 10
@@ -308,37 +313,94 @@ int parse_node_parents(node_t *nodes, int num_nodes) {
 int parse_node_status(node_t *nodes, int num_nodes) {
   pid_t p, pstat;
   node_t *parent;
+
   int pstatus;
+  int finished=0;
   for(int i=0; i<num_nodes; i++) {
-    nodes[i].status = READY;
+    //initialise default values
+    nodes[i].status = INELIGIBLE;
+    nodes[i].pid =0;
+    //set nodes with no parents to ready and run
     if(nodes[i].num_parents==0) {
-      p = fork();
-      if ( p == -1 ) { // error
-        perror("error forking");
-      } else if ( p == 0 ) { //child
-        nodes[i].status = RUNNING;
-        execlp(NULL, nodes[i].args);
-        return 0;
-      } else {
-        nodes[i].pid = p;
-      }
+      nodes[i].status = READY;
     }
-    for (int j=0; j<nodes[i].num_parents; j++) {
-        parent = &(nodes[nodes[i].parents[j]]);
-        if ( parent->pid == NULL ) {
-          nodes[i].status = INELIGIBLE;
-        } else {
-          pstat = waitpid(parent->pid, &pstatus, WNOHANG);
-          if ( pstat == 0 ) {
-            nodes[i].status = INELIGIBLE;
-          } else if ( pstat == -1 ) {
-            perror("error");
-          } else {
-            parent->status = FINISHED;
-          }
-        }
-    }
-  }
+   }
+
+    while(finished !=1){
+	
+	
+	//run nodes that are ready
+        for(int i=0; i<num_nodes; i++) {
+		if (nodes[i].status == READY){
+		printf("forking node %d\n",i);	
+		p = fork();
+      		if ( p == -1 ) { // error forking return -1
+        		perror("error forking");
+			return -1;
+      		} else if ( p == 0 ) { //child process
+			//execute command, kill parent on error
+			printf("Executing this\n");
+			if (strcmp(nodes[i].input,"stdin")!=0){
+				freopen(nodes[i].input,"r",stdin);
+			}
+			if (strcmp(nodes[i].output,"stdout")!=0){
+				freopen(nodes[i].output,"w",stdout);	
+			}
+			if(execvp(nodes[i].args[0], nodes[i].args)==-1){
+
+				
+         			perror("error exec, killing parent");
+				kill(getppid(),0);
+			}
+      		} else {
+      			nodes[i].pid = p;
+			nodes[i].status = RUNNING;
+			printf("waiting for node %d..........",i);
+			wait(&pstatus);
+			nodes[i].status = FINISHED;
+			printf("FINISHED!!\n");
+      		}
+	}
+	}
+	//check running processes status update status if finished
+	/*for(int i=0; i<num_nodes; i++){
+		if (nodes[i].status == RUNNING){
+			printf("getting pstat of node %d\n",i);
+			pstat = waitpid(nodes[i].pid,&pstatus,WNOHANG);
+			if (pstat == nodes[i].pid){
+				nodes[i].status = FINISHED;
+			}
+			if (pstat = -1){
+				perror("error getting pstat");
+				return -1;
+			}
+		}
+	}*/
+	//check all parent nodes of ineligible nodes, update status to READY if parents are all finished
+	int newstatus;
+	for (int i=0; i<num_nodes; i++){
+		if (nodes[i].status == INELIGIBLE){
+			
+			printf("checking ineligable node %d\n",i);
+			newstatus = READY;
+   			for (int j=0; j<nodes[i].num_parents; j++) {
+        			parent = &(nodes[nodes[i].parents[j]]);
+        			if (parent->status != FINISHED){
+					newstatus = INELIGIBLE;
+				}	
+        		}
+			nodes[i].status = newstatus;
+		}
+	}
+    	//check status
+	finished =1;
+	for (int i =0;i<num_nodes;i++){
+		if (nodes[i].status != FINISHED){
+			finished =0;
+		}
+	}
+	
+  }//endwhile 
   return 0;
 }
 
@@ -412,7 +474,7 @@ int main(int argc, char *argv[]) {
 
   /* Run processes */
   fprintf(stderr, "Running processes...\n");
-  num_nodes_finished = parse_node_status(nodes, num_nodes);
+ num_nodes_finished = parse_node_status(nodes, num_nodes);
   
   if (num_nodes_finished<0) {
     perror("Error executing processes");
