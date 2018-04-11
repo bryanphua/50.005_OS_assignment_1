@@ -14,6 +14,8 @@ gcc -std=c99 -o processmgt processmgt.c
 
 ## Programming Assignment 1
 Author 1 :Shun Git Kwok
+
 Author 2: Bryan Phua
+
 Date :10 Mar 2017
 
